@@ -1,0 +1,99 @@
+/* style.css – globalne style dla Ludo Club */
+
+/* Kolory główne */
+.root, .background {
+    -fx-background-color: #eaf4fb;
+}
+
+/* Przyciski główne */
+.button {
+    -fx-background-radius: 18;
+    -fx-font-size: 16px;
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+    -fx-font-weight: bold;
+    -fx-background-color: linear-gradient(to bottom, #6ec6ff, #1976d2);
+    -fx-text-fill: #fff;
+    -fx-effect: dropshadow(gaussian,rgba(80,110,180,0.12),6,0,0,2);
+    -fx-padding: 12 24;
+    -fx-cursor: hand;
+}
+.button:hover {
+    -fx-background-color: linear-gradient(to bottom, #42a5f5, #1976d2);
+    -fx-effect: dropshadow(gaussian,rgba(80,110,180,0.32),8,0,0,2);
+}
+
+/* Panele, karty, boxy */
+.card, .player-card {
+    -fx-background-color: #fff;
+    -fx-background-radius: 16;
+    -fx-padding: 16 22;
+    -fx-effect: dropshadow(two-pass-box, rgba(0,0,0,0.09), 10, 0, 0, 2);
+}
+
+.title {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2479c7;
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.subtitle {
+    -fx-font-size: 20px;
+    -fx-text-fill: #444;
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Pola tekstowe */
+.text-field {
+    -fx-background-radius: 8;
+    -fx-font-size: 15px;
+    -fx-padding: 6 12;
+    -fx-background-color: #fff;
+    -fx-border-color: #b3b3b3;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-text-fill: #555;
+}
+
+/* ComboBox styl */
+.combo-box, .combo-box-base {
+    -fx-background-radius: 8;
+    -fx-font-size: 15px;
+    -fx-padding: 6 12;
+    -fx-background-color: #fff;
+    -fx-border-color: #b3b3b3;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+/* Efekty dla aktywnego/przycisku */
+.button:focused, .text-field:focused {
+    -fx-border-color: #1976d2;
+    -fx-effect: dropshadow(gaussian,rgba(33,100,255,0.09),6,0,0,1);
+}
+
+.label, .player-name, .pawn-count {
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.label {
+    -fx-font-size: 15px;
+    -fx-text-fill: #333;
+}
+
+/* Plansza */
+.board-grid {
+    -fx-background-color: #f9fbff;
+    -fx-padding: 30;
+}
+
+/* Kratki planszy */
+.board-cell {
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+}
+
+/* Tooltip */
+.tooltip {
+    -fx-font-size: 13px;
+}
