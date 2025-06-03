@@ -5,4 +5,6 @@ module com.example.gry {
 
     opens com.example.gry to javafx.fxml;
     exports com.example.gry;
+    exports com.example.gry.go.gui.controllers;
+    opens com.example.gry.go.gui.controllers to javafx.fxml;
 }

@@ -27,7 +27,7 @@
 
 ---------------  S U M M A R Y ------------
 
-Command Line: -javaagent:F:\IntelliJ\IntelliJ IDEA 2024.2.3\lib\idea_rt.jar=57178:F:\IntelliJ\IntelliJ IDEA 2024.2.3\bin -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 --module-path=G:\Studia\Java\4 sem\Projekt\Gry\Gry\target\classes;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-base\17.0.6\javafx-base-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-fxml\17.0.6\javafx-fxml-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-graphics\17.0.6\javafx-graphics-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-controls\17.0.6\javafx-controls-17.0.6-win.jar -Djdk.module.main=com.example.gry com.example.gry/com.example.gry.HelloApplication
+Command Line: -javaagent:F:\IntelliJ\IntelliJ IDEA 2024.2.3\lib\idea_rt.jar=57178:F:\IntelliJ\IntelliJ IDEA 2024.2.3\bin -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 --module-path=G:\Studia\Java\4 sem\Projekt\Gry\Gry\target\classes;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-base\17.0.6\javafx-base-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-fxml\17.0.6\javafx-fxml-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-graphics\17.0.6\javafx-graphics-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-controls\17.0.6\javafx-controls-17.0.6-win.jar -Djdk.module.main=com.example.gry com.example.gry/com.example.gry.App
 
 Host: 12th Gen Intel(R) Core(TM) i5-12450H, 12 cores, 15G,  Windows 11 , 64 bit Build 22621 (10.0.22621.5262)
 Time: Wed May 21 01:17:16 2025  Windows 11 , 64 bit Build 22621 (10.0.22621.5262) elapsed time: 0.915359 seconds (0d 0h 0m 0s)
@@ -82,7 +82,7 @@ j  javax.xml.stream.XMLInputFactory.newInstance()Ljavax/xml/stream/XMLInputFacto
 j  javafx.fxml.FXMLLoader.loadImpl(Ljava/io/InputStream;Ljava/lang/Class;)Ljava/lang/Object;+71 javafx.fxml
 j  javafx.fxml.FXMLLoader.loadImpl(Ljava/lang/Class;)Ljava/lang/Object;+31 javafx.fxml
 j  javafx.fxml.FXMLLoader.load()Ljava/lang/Object;+17 javafx.fxml
-j  com.example.gry.HelloApplication.start(Ljavafx/stage/Stage;)V+20 com.example.gry
+j  com.example.gry.App.start(Ljavafx/stage/Stage;)V+20 com.example.gry
 j  com.sun.javafx.application.LauncherImpl.lambda$launchApplication1$9(Ljava/util/concurrent/atomic/AtomicBoolean;Ljavafx/application/Application;)V+20 javafx.graphics
 j  com.sun.javafx.application.LauncherImpl$$Lambda+0x000001e11d11fd40.run()V+8 javafx.graphics
 j  com.sun.javafx.application.PlatformImpl.lambda$runAndWait$12(Ljava/lang/Runnable;Ljava/util/concurrent/CountDownLatch;)V+1 javafx.graphics
@@ -2616,7 +2616,7 @@ symbol engine: initialized successfully - sym options: 0x614 - pdb path: .;F:\Ja
 
 VM Arguments:
 jvm_args: -javaagent:F:\IntelliJ\IntelliJ IDEA 2024.2.3\lib\idea_rt.jar=57178:F:\IntelliJ\IntelliJ IDEA 2024.2.3\bin -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 --module-path=G:\Studia\Java\4 sem\Projekt\Gry\Gry\target\classes;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-base\17.0.6\javafx-base-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-fxml\17.0.6\javafx-fxml-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-graphics\17.0.6\javafx-graphics-17.0.6-win.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-controls\17.0.6\javafx-controls-17.0.6-win.jar -Djdk.module.main=com.example.gry 
-java_command: com.example.gry/com.example.gry.HelloApplication
+java_command: com.example.gry/com.example.gry.App
 java_class_path (initial): C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-controls\17.0.6\javafx-controls-17.0.6.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-graphics\17.0.6\javafx-graphics-17.0.6.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-base\17.0.6\javafx-base-17.0.6.jar;C:\Users\Mateusz\.m2\repository\org\openjfx\javafx-fxml\17.0.6\javafx-fxml-17.0.6.jar
 Launcher Type: SUN_STANDARD
 

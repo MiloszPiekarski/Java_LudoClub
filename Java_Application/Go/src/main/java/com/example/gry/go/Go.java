@@ -1,131 +1,146 @@
 package com.example.gry.go;
 
-import com.example.gry.games.Game;
-import com.example.gry.games.Player;
 import com.example.gry.go.board.Board;
 import com.example.gry.go.board.StateOfIntersection;
 import com.example.gry.go.move.MoveValidator;
+import com.example.gry.go.player.Player;
 import com.example.gry.go.player.PlayerColour;
 
 import java.util.List;
 
-/**
- * Klasa reprezentująca grę Go.
- */
-public class Go extends Game {
-    /**
-     * Plansza do gry Go.
-     */
+public class Go {
     private final Board board;
-
-    /**
-     * Aktualny gracz wykonujący ruch.
-     */
     private Player currentPlayer;
-
-    /**
-     * Przeciwnik aktualnego gracza.
-     */
     private Player opponentPlayer;
+    private final List<Player> players;
+    private int consecutivePasses = 0;
+    private boolean gameOver = false;
+    private Player winner = null;
 
-    /**
-     * @param boardSize Rozmiar planszy do gry Go.
-     */
     public Go(int boardSize, Player blackPlayer, Player whitePlayer) {
         this.board = new Board(boardSize);
         this.currentPlayer = blackPlayer;
         this.opponentPlayer = whitePlayer;
+        this.players = List.of(blackPlayer, whitePlayer);
     }
 
-    /**
-     * @return Plansza do gry.
-     */
+    public void startGame() {
+        consecutivePasses = 0;
+        gameOver = false;
+        winner = null;
+        board.resetBoard();
+        System.out.println("Rozpoczęto nową grę w Go!");
+    }
+
+    public void switchPlayer() {
+        Player temp = currentPlayer;
+        currentPlayer = opponentPlayer;
+        opponentPlayer = temp;
+    }
+
+    public void makeMove(Player player, com.example.gry.go.move.Move move) {
+        if (gameOver) {
+            throw new IllegalStateException("Gra już się zakończyła");
+        }
+
+        consecutivePasses = 0;
+
+        if (!new MoveValidator().isValidMove(move, board, move.getStoneColour())) {
+            throw new IllegalArgumentException("Nieprawidłowy ruch");
+        }
+
+        board.getIntersection(move.getCoordinate().row(), move.getCoordinate().column())
+                .setIntersectionState(move.getStoneColour().convertToStateOfIntersection());
+
+        board.captureGroupsIfNoLiberties(
+                move.getCoordinate().row(),
+                move.getCoordinate().column(),
+                move.getStoneColour().convertToStateOfIntersection()
+        );
+
+        switchPlayer();
+    }
+
+    public void pass() {
+        if (gameOver) {
+            throw new IllegalStateException("Gra już się zakończyła");
+        }
+
+        consecutivePasses++;
+        System.out.println("Gracz " + currentPlayer.getPlayerColour() + " spasował");
+
+        if (consecutivePasses >= 2) {
+            endGame();
+        } else {
+            switchPlayer();
+        }
+    }
+
+    public void endGame() {
+        gameOver = true;
+        System.out.println("Gra zakończona!");
+
+        int blackScore = board.calculateScore(StateOfIntersection.BLACK);
+        int whiteScore = board.calculateScore(StateOfIntersection.WHITE);
+
+        whiteScore += 6.5;
+
+        if (blackScore > whiteScore) {
+            winner = players.stream()
+                    .filter(p -> p.getPlayerColour() == PlayerColour.BLACK)
+                    .findFirst()
+                    .orElse(null);
+        } else if (whiteScore > blackScore) {
+            winner = players.stream()
+                    .filter(p -> p.getPlayerColour() == PlayerColour.WHITE)
+                    .findFirst()
+                    .orElse(null);
+        }
+    }
+
+    public void surrender(Player surrenderingPlayer) {
+        if (gameOver) {
+            throw new IllegalStateException("Gra już się zakończyła");
+        }
+
+        gameOver = true;
+
+        // Ustalenie zwycięzcy - przeciwnik poddającego się gracza
+        winner = players.stream()
+                .filter(p -> p != surrenderingPlayer)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public Player getWinner() {
+        return winner;
+    }
+
+    public int getBlackScore() {
+        return board.calculateScore(StateOfIntersection.BLACK);
+    }
+
+    public double getWhiteScore() {
+        return board.calculateScore(StateOfIntersection.WHITE) + 6.5;
+    }
+
     public Board getBoard() {
         return board;
     }
 
-    /**
-     * @return
-     */
     public Player getCurrentPlayer() {
         return currentPlayer;
     }
 
-    /**
-     * @return
-     */
     public Player getOpponentPlayer() {
         return opponentPlayer;
     }
 
-    /**
-     * Konstruktor klasy Go.
-     * @param players Lista graczy uczestniczących w grze.
-     */
-    @Override
-    public void startGame(List<Player> players) {
-    }
-
-    /**
-     * Destruktor klasy Go.
-     */
-    @Override
-    public void endGame() {
-
-    }
-
-    /**
-     * Metoda zapisująca aktualny stan gry.
-     */
-    @Override
-    public void saveGame() {
-
-    }
-
-    /**
-     * @param player Gracz wykonujący ruch.
-     * @param move   Ruch wykonany przez gracza.
-     */
-    @Override
-    public void makeMove(Player player, com.example.gry.go.move.Move move) {
-
-
-        if (player == null) {
-            throw new IllegalArgumentException("Gracz nie może być null.");
-        }
-        if (move == null) {
-            throw new IllegalArgumentException("Ruch nie może być null.");
-        }
-        if (!players.contains(player)) {
-            throw new IllegalArgumentException("Gracz nie bierze udziału w tej grze.");
-        }
-
-        if(!new MoveValidator().isValidMove(move, board, move.getStoneColour())) {
-            throw new IllegalArgumentException("Nielegalny ruch.");
-        }
-
-        // Stawia kamień na planszy
-        board.getIntersection(move.getCoordinate()).setIntersectionState(convertPlayerColourToIntersectionStateColour(move.getStoneColour()));
-    }
-
-    /**
-     * Zamienia kolor gracza na kolor przecięcia na planszy.
-     *
-     * @param playerColour Kolor gracza, który chce się zamienić na kolor przecięcia.
-     * @return Kolor przecięcia na planszy.
-     */
-    public StateOfIntersection convertPlayerColourToIntersectionStateColour(PlayerColour playerColour) {
-        if(playerColour == PlayerColour.WHITE) {
-            return StateOfIntersection.WHITE;
-        }
-        return StateOfIntersection.BLACK;
-    }
-
-    /**
-     * Metoda zapisująca przebieg rozgrywki.
-     */
-    @Override
-    protected void logAction() {
-
+    public int getConsecutivePasses() {
+        return consecutivePasses;
     }
 }

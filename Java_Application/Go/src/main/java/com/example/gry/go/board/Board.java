@@ -1,6 +1,10 @@
 package com.example.gry.go.board;
 
+import com.example.gry.go.player.PlayerColour;
+
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
 
 public class Board {
@@ -46,6 +50,17 @@ public class Board {
         }
     }
 
+    public Board(Board other) {
+        this.size = other.size;
+        this.intersections = new Intersection[size][size];
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                StateOfIntersection state = other.intersections[row][col].getIntersectionState();
+                this.intersections[row][col] = new Intersection(new Coordinate(row, col), state);
+            }
+        }
+    }
+
     /**
      * Inicjalizuje planszę do gry w Go. Wszystkie przecięcia są puste.
      */
@@ -72,6 +87,46 @@ public class Board {
         }
     }
 
+    private void exploreTerritory(int row, int col, boolean[][] visited,
+                                  Set<Intersection> region, Set<StateOfIntersection> borderingColors) {
+        Queue<Coordinate> queue = new LinkedList<>();
+        queue.add(new Coordinate(row, col));
+        visited[row][col] = true;
+
+        // BFS – przeszukujemy wszystkie puste pola połączone z początkowym
+        while (!queue.isEmpty()) {
+            Coordinate current = queue.poll();
+            int r = current.row();
+            int c = current.column();
+
+            Intersection intersection = intersections[r][c];
+            region.add(intersection);
+
+            // Sprawdzamy sąsiadów w czterech kierunkach
+            for (int[] dir : directions()) {
+                int newRow = r + dir[0];
+                int newCol = c + dir[1];
+
+                // Sprawdzenie granic planszy
+                if (!isInBounds(newRow, newCol)) continue;
+
+                // Jeśli pole już odwiedzone, pomijamy
+                if (visited[newRow][newCol]) continue;
+
+                Intersection neighbor = intersections[newRow][newCol];
+
+                if (neighbor.isEmpty()) {
+                    // Jeśli sąsiadujące pole jest puste — dodaj do kolejki do dalszego przeszukiwania
+                    queue.add(new Coordinate(newRow, newCol));
+                    visited[newRow][newCol] = true;
+                } else {
+                    // Jeśli pole nie jest puste — zapamiętaj jego kolor jako graniczny
+                    borderingColors.add(neighbor.getIntersectionState());
+                }
+            }
+        }
+    }
+
     /**
      * Oblicza wynik gracza na podstawie koloru przecięcia.
      *
@@ -79,25 +134,169 @@ public class Board {
      * @return Wynik dla danego koloru przecięcia.
      */
     public int calculateScore(StateOfIntersection colour) {
-        Set<Coordinate> visited = new HashSet<>();
+        boolean[][] visited = new boolean[size][size]; // oznaczenie odwiedzonych pól
+        int score = 0; // wynik końcowy
 
-        // Dodajemy wszystkie przecięcia na planszy do zbioru visited, żeby potem z niego usuwać
-        for(int row = 0; row < size; row++) {
-            for(int column = 0; column < size; column++) {
-                visited.add(intersections[row][column].getCoordinate());
-            }
-        }
+        // Iterujemy przez każde pole planszy
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                Intersection intersection = intersections[row][col];
 
-        // Jeśli przecięcie jest zajęte przez dany kolor, usuwamy je z visited
-        for(int row = 0; row < size; row++) {
-            for(int column = 0; column < size; column++) {
-                if(intersections[row][column].getIntersectionState() == colour) {
-                    visited.remove(intersections[row][column].getCoordinate());
+                // 1. Zliczamy własne kamienie jako punkty
+                if (intersection.getIntersectionState() == colour) {
+                    score++;
+                }
+
+                // 2. Analizujemy potencjalne terytorium
+                else if (intersection.isEmpty() && !visited[row][col]) {
+                    Set<Intersection> region = new HashSet<>(); // puste pola należące do jednego obszaru
+                    Set<StateOfIntersection> borderingColours = new HashSet<>(); // kolory wokół obszaru
+
+                    // Przeglądamy pusty obszar i zbieramy otaczające kolory
+                    exploreTerritory(row, col, visited, region, borderingColours);
+
+                    // Jeśli cały pusty obszar jest otoczony przez jeden kolor (czyli terytorium gracza),
+                    // dodajemy jego rozmiar do wyniku gracza
+                    if (borderingColours.size() == 1 && borderingColours.contains(colour)) {
+                        score += region.size();
+                    }
                 }
             }
         }
 
-        return 0;
+        return score;
+    }
+
+    public void captureGroupsIfNoLiberties(int row, int col, StateOfIntersection currentColor) {
+        StateOfIntersection opponent = (currentColor == StateOfIntersection.BLACK)
+                ? StateOfIntersection.WHITE
+                : StateOfIntersection.BLACK;
+
+        // Sprawdzamy wszystkich sąsiadów przeciwnika
+        for (int[] dir : directions()) {
+            int newRow = row + dir[0];
+            int newCol = col + dir[1];
+
+            if (!isInBounds(newRow, newCol)) continue;
+
+            Intersection neighbor = getIntersection(newRow, newCol);
+            if (neighbor.getIntersectionState() == opponent) {
+                // Sprawdzamy czy grupa przeciwnika ma oddechy
+                if (!hasLiberties(newRow, newCol)) {
+                    // Usuwamy całą grupę
+                    Set<Intersection> group = collectGroup(newRow, newCol, opponent);
+                    clearGroup(group);
+                }
+            }
+        }
+    }
+
+    private Set<Intersection> collectGroup(int row, int col, StateOfIntersection color) {
+        Set<Intersection> group = new HashSet<>();
+        Queue<Coordinate> queue = new LinkedList<>();
+        queue.add(new Coordinate(row, col));
+        group.add(intersections[row][col]);
+
+        while (!queue.isEmpty()) {
+            Coordinate current = queue.poll();
+            int r = current.row();
+            int c = current.column();
+
+            for (int[] dir : directions()) {
+                int newRow = r + dir[0];
+                int newCol = c + dir[1];
+
+                if (!isInBounds(newRow, newCol)) continue;
+
+                Intersection neighbor = intersections[newRow][newCol];
+                if (neighbor.getIntersectionState() == color && !group.contains(neighbor)) {
+                    group.add(neighbor);
+                    queue.add(new Coordinate(newRow, newCol));
+                }
+            }
+        }
+
+        return group;
+    }
+
+    private boolean groupHasLiberties(Set<Intersection> group) {
+        for (Intersection stone : group) {
+            int row = stone.getCoordinate().row();
+            int col = stone.getCoordinate().column();
+
+            for (int[] dir : directions()) {
+                int newRow = row + dir[0];
+                int newCol = col + dir[1];
+
+                if (isInBounds(newRow, newCol) && getIntersection(newRow, newCol).isEmpty()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void clearGroup(Set<Intersection> group) {
+        for (Intersection stone : group) {
+            stone.setIntersectionState(StateOfIntersection.EMPTY);
+        }
+    }
+
+    private int[][] directions() {
+        return new int[][] {
+                {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+        };
+    }
+
+    public boolean hasLiberties(int row, int column) {
+        if (!isInBounds(row, column)) return false;
+
+        StateOfIntersection color = intersections[row][column].getIntersectionState();
+        if (color == StateOfIntersection.EMPTY) return false;
+
+        boolean[][] visited = new boolean[size][size];
+        Queue<Coordinate> queue = new LinkedList<>();
+        queue.add(new Coordinate(row, column));
+        visited[row][column] = true;
+
+        while (!queue.isEmpty()) {
+            Coordinate current = queue.poll();
+            int r = current.row();
+            int c = current.column();
+
+            for (int[] dir : directions()) {
+                int nr = r + dir[0];
+                int nc = c + dir[1];
+
+                if (!isInBounds(nr, nc)) continue;
+                if (visited[nr][nc]) continue;
+
+                StateOfIntersection neighborState = intersections[nr][nc].getIntersectionState();
+
+                if (neighborState == StateOfIntersection.EMPTY) {
+                    return true; // Oddech znaleziony
+                }
+
+                if (neighborState == color) {
+                    visited[nr][nc] = true;
+                    queue.add(new Coordinate(nr, nc));
+                }
+            }
+        }
+
+        return false; // Brak oddechów
+    }
+
+    public void resetBoard() {
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                try {
+                    intersections[row][col].setIntersectionState(StateOfIntersection.EMPTY);
+                } catch (Exception e) {
+                    System.err.println("Błąd resetowania przecięcia: " + e.getMessage());
+                }
+            }
+        }
     }
 
     /**
@@ -159,5 +358,30 @@ public class Board {
         return row >= 0 && row < size && column >= 0 && column < size;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Board other)) return false;
+        if (this.size != other.size) return false;
 
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                if (this.intersections[row][col].getIntersectionState() != other.intersections[row][col].getIntersectionState()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = size;
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                result = 31 * result + intersections[row][col].getIntersectionState().hashCode();
+            }
+        }
+        return result;
+    }
 }

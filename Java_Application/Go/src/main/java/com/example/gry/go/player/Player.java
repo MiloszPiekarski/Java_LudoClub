@@ -1,9 +1,14 @@
 package com.example.gry.go.player;
 
+import com.example.gry.go.board.Board;
+import com.example.gry.go.move.Move;
+
 /**
  * Reprezentuje gracza w grze Go.
  */
-public abstract class Player extends com.example.gry.games.Player{
+public abstract class Player {
+    protected String nickname;
+    protected boolean isOnline;
     /**
      * Kolor gracza.
      */
@@ -16,7 +21,8 @@ public abstract class Player extends com.example.gry.games.Player{
      * @param playerColour kolor gracza.
      */
     public Player(String nickname, PlayerColour playerColour) {
-        super(nickname);
+        this.nickname = nickname;
+        this.isOnline = true;
         this.playerColour = playerColour;
     }
 
@@ -26,4 +32,13 @@ public abstract class Player extends com.example.gry.games.Player{
     public PlayerColour getPlayerColour() {
         return playerColour;
     }
+
+    /**
+     * @return Zwraca nazwę gracza.
+     */
+    public String getNickname() {
+        return nickname;
+    }
+
+    public abstract Move provideMove(Board board);
 }

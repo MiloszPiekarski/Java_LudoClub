@@ -66,6 +66,17 @@ public class Intersection {
         this.intersectionState = newIntersectionState;
     }
 
+    /**
+     * @return Zwraca true, jeśli przecięcie jest puste, false w przeciwnym razie.
+     */
+    public boolean isEmpty() {
+        if (this.intersectionState == StateOfIntersection.EMPTY) {
+            return true;
+        }
+
+        return false;
+    }
+
     @Override
     public String toString() {
         return coordinate.toString() + ": " + intersectionState;
