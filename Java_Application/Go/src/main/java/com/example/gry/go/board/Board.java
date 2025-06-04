@@ -18,6 +18,8 @@ public class Board {
      */
     private final Intersection[][] intersections;
 
+    private final int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+
     /**
      * Konstruktor klasy Board.
      *
@@ -167,12 +169,13 @@ public class Board {
         return score;
     }
 
-    public void captureGroupsIfNoLiberties(int row, int col, StateOfIntersection currentColor) {
+    public int captureGroupsIfNoLiberties(int row, int col, StateOfIntersection currentColor) {
         StateOfIntersection opponent = (currentColor == StateOfIntersection.BLACK)
                 ? StateOfIntersection.WHITE
                 : StateOfIntersection.BLACK;
 
-        // Sprawdzamy wszystkich sąsiadów przeciwnika
+        int capturedCount = 0;
+
         for (int[] dir : directions()) {
             int newRow = row + dir[0];
             int newCol = col + dir[1];
@@ -181,17 +184,18 @@ public class Board {
 
             Intersection neighbor = getIntersection(newRow, newCol);
             if (neighbor.getIntersectionState() == opponent) {
-                // Sprawdzamy czy grupa przeciwnika ma oddechy
                 if (!hasLiberties(newRow, newCol)) {
-                    // Usuwamy całą grupę
                     Set<Intersection> group = collectGroup(newRow, newCol, opponent);
+                    capturedCount += group.size();
                     clearGroup(group);
                 }
             }
         }
+
+        return capturedCount;
     }
 
-    private Set<Intersection> collectGroup(int row, int col, StateOfIntersection color) {
+    public Set<Intersection> collectGroup(int row, int col, StateOfIntersection color) {
         Set<Intersection> group = new HashSet<>();
         Queue<Coordinate> queue = new LinkedList<>();
         queue.add(new Coordinate(row, col));
@@ -202,7 +206,7 @@ public class Board {
             int r = current.row();
             int c = current.column();
 
-            for (int[] dir : directions()) {
+            for (int[] dir : directions) {
                 int newRow = r + dir[0];
                 int newCol = c + dir[1];
 
@@ -236,9 +240,13 @@ public class Board {
         return false;
     }
 
-    private void clearGroup(Set<Intersection> group) {
+    public void clearGroup(Set<Intersection> group) {
+        if (group == null) return;
+
         for (Intersection stone : group) {
-            stone.setIntersectionState(StateOfIntersection.EMPTY);
+            if (stone != null) {
+                stone.setIntersectionState(StateOfIntersection.EMPTY);
+            }
         }
     }
 
@@ -264,7 +272,7 @@ public class Board {
             int r = current.row();
             int c = current.column();
 
-            for (int[] dir : directions()) {
+            for (int[] dir : directions) {
                 int nr = r + dir[0];
                 int nc = c + dir[1];
 
@@ -336,6 +344,10 @@ public class Board {
         return intersections[coordinate.row()][coordinate.column()];
     }
 
+    public void updateIntersection(Coordinate coordinate, StateOfIntersection state) {
+        intersections[coordinate.row()][coordinate.column()].setIntersectionState(state);
+    }
+
     /**
      * Metoda sprawdzająca, czy podane współrzędne są w obrębie planszy.
      *
@@ -366,7 +378,8 @@ public class Board {
 
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                if (this.intersections[row][col].getIntersectionState() != other.intersections[row][col].getIntersectionState()) {
+                if (this.intersections[row][col].getIntersectionState() !=
+                        other.intersections[row][col].getIntersectionState()) {
                     return false;
                 }
             }

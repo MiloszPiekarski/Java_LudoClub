@@ -1,5 +1,7 @@
 package com.example.gry.go.board;
 
+import java.util.Objects;
+
 /**
  * Reprezentuje przecięcie na planszy gry Go.
  */
@@ -75,6 +77,20 @@ public class Intersection {
         }
 
         return false;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Intersection that = (Intersection) o;
+        return coordinate.equals(that.coordinate) &&
+                intersectionState == that.intersectionState;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(coordinate, intersectionState);
     }
 
     @Override

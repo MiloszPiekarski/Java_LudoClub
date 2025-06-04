@@ -1,12 +1,17 @@
 package com.example.gry.go;
 
 import com.example.gry.go.board.Board;
+import com.example.gry.go.board.Coordinate;
+import com.example.gry.go.board.Intersection;
 import com.example.gry.go.board.StateOfIntersection;
+import com.example.gry.go.move.Move;
 import com.example.gry.go.move.MoveValidator;
 import com.example.gry.go.player.Player;
 import com.example.gry.go.player.PlayerColour;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Go {
     private final Board board;
@@ -16,6 +21,12 @@ public class Go {
     private int consecutivePasses = 0;
     private boolean gameOver = false;
     private Player winner = null;
+    private Set<Coordinate> markedDeadStones = new HashSet<>();
+    private boolean inDeadStoneMarkingMode = false;
+    private int blackCaptures = 0;
+    private int whiteCaptures = 0;
+    private final MoveValidator moveValidator = new MoveValidator();
+    private int lastCapturedStones = 0;
 
     public Go(int boardSize, Player blackPlayer, Player whitePlayer) {
         this.board = new Board(boardSize);
@@ -38,25 +49,39 @@ public class Go {
         opponentPlayer = temp;
     }
 
-    public void makeMove(Player player, com.example.gry.go.move.Move move) {
+    public void makeMove(Player player, Move move) {
         if (gameOver) {
             throw new IllegalStateException("Gra już się zakończyła");
         }
 
         consecutivePasses = 0;
 
-        if (!new MoveValidator().isValidMove(move, board, move.getStoneColour())) {
+        if (!moveValidator.isValidMove(move, board, move.getStoneColour())) {
             throw new IllegalArgumentException("Nieprawidłowy ruch");
         }
 
-        board.getIntersection(move.getCoordinate().row(), move.getCoordinate().column())
-                .setIntersectionState(move.getStoneColour().convertToStateOfIntersection());
+        // Zapisz stan przed ruchem
+        Board boardBeforeMove = new Board(board);
 
-        board.captureGroupsIfNoLiberties(
-                move.getCoordinate().row(),
-                move.getCoordinate().column(),
-                move.getStoneColour().convertToStateOfIntersection()
+        // Wykonaj ruch
+        Coordinate coord = move.getCoordinate();
+        board.updateIntersection(move.getCoordinate(),
+                move.getStoneColour().convertToStateOfIntersection());
+
+        // Wykonaj zbicie
+        lastCapturedStones = board.captureGroupsIfNoLiberties(
+                coord.row(), coord.column(), move.getStoneColour().convertToStateOfIntersection()
         );
+
+        // Zapisz stan po ruchu
+        moveValidator.recordBoardState(boardBeforeMove, lastCapturedStones);
+
+        // Aktualizuj statystyki zbitych kamieni
+        if (move.getStoneColour() == PlayerColour.BLACK) {
+            blackCaptures += lastCapturedStones;
+        } else {
+            whiteCaptures += lastCapturedStones;
+        }
 
         switchPlayer();
     }
@@ -70,7 +95,7 @@ public class Go {
         System.out.println("Gracz " + currentPlayer.getPlayerColour() + " spasował");
 
         if (consecutivePasses >= 2) {
-            endGame();
+            endGame(); // TYLKO ustawia tryb oznaczania, nie kończy całkowicie
         } else {
             switchPlayer();
         }
@@ -78,12 +103,46 @@ public class Go {
 
     public void endGame() {
         gameOver = true;
-        System.out.println("Gra zakończona!");
+        inDeadStoneMarkingMode = true; // Ustaw tryb oznaczania martwych kamieni
+        System.out.println("Gra zakończona! Oznacz martwe grupy kamieni.");
+    }
 
-        int blackScore = board.calculateScore(StateOfIntersection.BLACK);
-        int whiteScore = board.calculateScore(StateOfIntersection.WHITE);
+    public void toggleDeadStone(int row, int col) {
+        if (!inDeadStoneMarkingMode) return;
 
-        whiteScore += 6.5;
+        Coordinate coord = new Coordinate(row, col);
+        Intersection intersection = board.getIntersection(coord);
+        if (intersection.isEmpty()) return;
+
+        if (markedDeadStones.contains(coord)) {
+            Set<Intersection> group = board.collectGroup(row, col, intersection.getIntersectionState());
+            for (Intersection stone : group) {
+                markedDeadStones.remove(stone.getCoordinate());
+            }
+        } else {
+            Set<Intersection> group = board.collectGroup(row, col, intersection.getIntersectionState());
+            for (Intersection stone : group) {
+                markedDeadStones.add(stone.getCoordinate());
+            }
+        }
+    }
+
+    public void removeMarkedDeadStones() {
+        for (Coordinate coord : markedDeadStones) {
+            board.getIntersection(coord).setIntersectionState(StateOfIntersection.EMPTY);
+        }
+        markedDeadStones.clear();
+        inDeadStoneMarkingMode = false;
+        calculateScores(); // Wywołanie publicznej metody
+    }
+
+    public void calculateScores() {
+        int blackTerritory = board.calculateScore(StateOfIntersection.BLACK);
+        int whiteTerritory = board.calculateScore(StateOfIntersection.WHITE);
+
+        // Punkty = terytorium + przechwycone kamienie
+        int blackScore = blackTerritory + blackCaptures;
+        double whiteScore = whiteTerritory + whiteCaptures + 6.5; // + komi
 
         if (blackScore > whiteScore) {
             winner = players.stream()
@@ -95,6 +154,33 @@ public class Go {
                     .filter(p -> p.getPlayerColour() == PlayerColour.WHITE)
                     .findFirst()
                     .orElse(null);
+        }
+    }
+
+    public boolean isInDeadStoneMarkingMode() {
+        return inDeadStoneMarkingMode;
+    }
+
+    public Set<Coordinate> getMarkedDeadStones() {
+        return markedDeadStones;
+    }
+
+    public void setInDeadStoneMarkingMode(boolean mode) {
+        this.inDeadStoneMarkingMode = mode;
+        if (!mode) {
+            this.gameOver = true; // Po zakończeniu oznaczania, gra jest całkowicie zakończona
+        }
+    }
+
+    private void removeDeadGroups() {
+        for (int row = 0; row < board.getSize(); row++) {
+            for (int col = 0; col < board.getSize(); col++) {
+                Intersection intersection = board.getIntersection(row, col);
+                if (!intersection.isEmpty() && !board.hasLiberties(row, col)) {
+                    Set<Intersection> group = board.collectGroup(row, col, intersection.getIntersectionState());
+                    board.clearGroup(group);  // Wywołanie publicznej metody
+                }
+            }
         }
     }
 
@@ -125,7 +211,7 @@ public class Go {
     }
 
     public double getWhiteScore() {
-        return board.calculateScore(StateOfIntersection.WHITE) + 6.5;
+        return board.calculateScore(StateOfIntersection.WHITE) + 6.5; // komi 6.5 punktu
     }
 
     public Board getBoard() {
@@ -142,5 +228,13 @@ public class Go {
 
     public int getConsecutivePasses() {
         return consecutivePasses;
+    }
+
+    public int getBlackCaptures() {
+        return blackCaptures;
+    }
+
+    public int getWhiteCaptures() {
+        return whiteCaptures;
     }
 }

@@ -24,6 +24,8 @@
             <Separator/>
             <Button text="Pas" onAction="#handlePass"/>
             <Button text="Poddaj się" onAction="#handleSurrender"/>
+            <Button fx:id="confirmDeadStonesButton" text="Potwierdź martwe kamienie"
+                    onAction="#handleConfirmDeadStones" visible="false"/>
             <Button text="Nowa gra" onAction="#handleNewGame"/>
             <Button text="Wyjdź" onAction="#handleExit"/>
         </VBox>

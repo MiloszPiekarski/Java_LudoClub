@@ -2,6 +2,7 @@ package com.example.gry.go.gui.controllers;
 
 import com.example.gry.go.Go;
 import com.example.gry.go.board.Coordinate;
+import com.example.gry.go.board.Intersection;
 import com.example.gry.go.board.StateOfIntersection;
 import com.example.gry.go.player.HumanPlayer;
 import com.example.gry.go.player.Player;
@@ -13,6 +14,7 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
@@ -32,6 +34,8 @@ public class MainController implements Initializable {
     @FXML private Label currentPlayerLabel;
     @FXML private Label blackScoreLabel;
     @FXML private Label whiteScoreLabel;
+    @FXML
+    private Button confirmDeadStonesButton;
 
     private Go goGame;
     private int boardSize = 9;
@@ -45,6 +49,9 @@ public class MainController implements Initializable {
 
         boardGrid.widthProperty().addListener((obs, oldVal, newVal) -> resizeBoard());
         boardGrid.heightProperty().addListener((obs, oldVal, newVal) -> resizeBoard());
+
+        // Ukryj przycisk potwierdzenia na początku
+        confirmDeadStonesButton.setVisible(false);
     }
 
     private double calculateStoneSize() {
@@ -175,7 +182,8 @@ public class MainController implements Initializable {
         container.getChildren().clear();
 
         try {
-            StateOfIntersection state = goGame.getBoard().getIntersection(row, col).getIntersectionState();
+            Intersection intersection = goGame.getBoard().getIntersection(row, col);
+            StateOfIntersection state = intersection.getIntersectionState();
 
             if (state != StateOfIntersection.EMPTY) {
                 Circle stone = new Circle(stoneSize / 2 - 1);
@@ -183,16 +191,20 @@ public class MainController implements Initializable {
                 stone.setCenterY(stoneSize / 2);
                 stone.setStroke(Color.BLACK);
 
-                if (state == StateOfIntersection.BLACK) {
-                    stone.setFill(Color.BLACK);
-                } else {
-                    stone.setFill(Color.WHITE);
+                stone.setFill(state == StateOfIntersection.BLACK ? Color.BLACK : Color.WHITE);
+
+                // Sprawdzanie po współrzędnych
+                Coordinate currentCoord = new Coordinate(row, col);
+                if (goGame.isInDeadStoneMarkingMode() &&
+                        goGame.getMarkedDeadStones().contains(currentCoord)) {
+                    stone.setOpacity(0.5);
+                    stone.setStroke(Color.RED);
                 }
 
                 container.getChildren().add(stone);
             }
         } catch (Exception e) {
-            System.err.println("Błąd aktualizacji kamienia " + row + "," + col + ": " + e.getMessage());
+            System.err.println("Błąd aktualizacji kamienia: " + e.getMessage());
         }
     }
 
@@ -204,12 +216,21 @@ public class MainController implements Initializable {
         }
     }
 
+    private void enterDeadStoneMarkingMode() {
+        // goGame.endGame() już zostało wywołane w handlePass(), więc tylko:
+        updateGameInfo();
+        confirmDeadStonesButton.setVisible(true);
+
+        Alert info = new Alert(Alert.AlertType.INFORMATION);
+        info.setTitle("Oznaczanie martwych kamieni");
+        info.setHeaderText("Kliknij na grupy kamieni, które uważasz za martwe");
+        info.setContentText("Po zakończeniu kliknij 'Potwierdź martwe kamienie'");
+        info.show();
+    }
+
     @FXML
     public void handleMove(MouseEvent event) {
-        if (goGame == null || goGame.isGameOver()) {
-            showGameOverAlert();
-            return;
-        }
+        if (goGame == null) return;
 
         double clickX = event.getX() - gridCanvas.getLayoutX();
         double clickY = event.getY() - gridCanvas.getLayoutY();
@@ -218,23 +239,30 @@ public class MainController implements Initializable {
         int row = (int) (clickY / stoneSize);
 
         if (row >= 0 && row < boardSize && col >= 0 && col < boardSize) {
-            Player currentPlayer = goGame.getCurrentPlayer();
+            if (goGame.isGameOver() && goGame.isInDeadStoneMarkingMode()) {
+                // Tryb oznaczania martwych kamieni
+                goGame.toggleDeadStone(row, col);
+                updateAllStones();
+            } else if (!goGame.isGameOver()) {
+                // Normalny ruch w grze
+                Player currentPlayer = goGame.getCurrentPlayer();
 
-            if (currentPlayer instanceof HumanPlayer) {
-                HumanPlayer humanPlayer = (HumanPlayer) currentPlayer;
+                if (currentPlayer instanceof HumanPlayer) {
+                    HumanPlayer humanPlayer = (HumanPlayer) currentPlayer;
 
-                try {
-                    humanPlayer.setNextMove(new Coordinate(row, col));
-                    goGame.makeMove(humanPlayer, humanPlayer.provideMove(goGame.getBoard()));
+                    try {
+                        humanPlayer.setNextMove(new Coordinate(row, col));
+                        goGame.makeMove(humanPlayer, humanPlayer.provideMove(goGame.getBoard()));
 
-                    updateAllStones();
-                    updateGameInfo();
+                        updateAllStones();
+                        updateGameInfo();
 
-                    if (goGame.isGameOver()) {
-                        showGameOverAlert();
+                        if (goGame.isGameOver()) {
+                            enterDeadStoneMarkingMode();
+                        }
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Nieprawidłowy ruch: " + e.getMessage());
                     }
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Nieprawidłowy ruch: " + e.getMessage());
                 }
             }
         }
@@ -244,7 +272,11 @@ public class MainController implements Initializable {
         if (goGame == null) return;
 
         if (goGame.isGameOver()) {
-            currentPlayerLabel.setText("Gra zakończona!");
+            if (goGame.isInDeadStoneMarkingMode()) {
+                currentPlayerLabel.setText("Oznaczanie martwych kamieni");
+            } else {
+                currentPlayerLabel.setText("Gra zakończona!");
+            }
         } else {
             PlayerColour currentColour = goGame.getCurrentPlayer().getPlayerColour();
             currentPlayerLabel.setText("Aktualny gracz: " +
@@ -261,7 +293,9 @@ public class MainController implements Initializable {
     }
 
     private void showGameOverAlert() {
-        if (goGame == null || !goGame.isGameOver()) return;
+        if (goGame == null || !goGame.isGameOver() || goGame.isInDeadStoneMarkingMode()) {
+            return; // Nie pokazuj alertu jeśli wciąż w trybie oznaczania
+        }
 
         Player winner = goGame.getWinner();
         String winnerText = (winner != null)
@@ -274,12 +308,29 @@ public class MainController implements Initializable {
                 goGame.getWhiteScore()
         );
 
+        // Dodaj informację o usuniętych kamieniach
+        String deadStonesInfo = "\n\nAutomatycznie usunięto martwe grupy kamieni przed liczeniem punktów.";
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Koniec gry");
         alert.setHeaderText("Gra w Go zakończona!");
-        alert.setContentText(winnerText + "\n\n" + scores);
+        alert.setContentText(winnerText + "\n\n" + scores + deadStonesInfo);
 
         alert.showAndWait();
+    }
+
+    @FXML
+    private void handleConfirmDeadStones() {
+        goGame.removeMarkedDeadStones();
+        goGame.calculateScores();
+
+        // Teraz dopiero całkowicie kończymy grę
+        goGame.setInDeadStoneMarkingMode(false);
+
+        updateAllStones();
+        confirmDeadStonesButton.setVisible(false);
+        showGameOverAlert();
+        updateGameInfo();
     }
 
     @FXML
@@ -287,15 +338,16 @@ public class MainController implements Initializable {
         if (goGame == null) return;
 
         if (goGame.isGameOver()) {
-            showGameOverAlert();
+            // Jeśli już jesteśmy w trybie oznaczania, nie rób nic
             return;
         }
 
         goGame.pass();
         updateGameInfo();
 
-        if (goGame.isGameOver()) {
-            showGameOverAlert();
+        if (goGame.isGameOver() && goGame.isInDeadStoneMarkingMode()) {
+            // TYLKO aktualizuj informacje, nie pokazuj alertu
+            enterDeadStoneMarkingMode();
         }
     }
 
